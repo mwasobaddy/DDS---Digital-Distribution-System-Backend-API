@@ -19,6 +19,16 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// Test endpoint to verify deployment
+Route::get('/test', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'DDS API is working!',
+        'timestamp' => now(),
+        'version' => '1.0.0'
+    ]);
+});
+
 // DDS API Routes
 Route::post('/da/create', [DAController::class, 'create']);
 Route::post('/dcd/create', [DCDController::class, 'create']);
