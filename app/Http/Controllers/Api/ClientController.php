@@ -20,7 +20,6 @@ class ClientController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users',
             'phone' => 'required|string',
-            'password' => 'required|string|min:8',
             'company_name' => 'required|string',
             'account_type' => 'nullable|string',
             'country' => 'nullable|string',
@@ -28,11 +27,14 @@ class ClientController extends Controller
             'billing_info' => 'nullable|array',
         ]);
 
+        // Auto-generate password if not provided
+        $password = $request->password ?: $this->generateSecurePassword();
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($password),
             'role' => 'client',
         ]);
 
@@ -46,7 +48,7 @@ class ClientController extends Controller
             'billing_info' => $request->billing_info ?? [],
         ]);
 
-        // TODO: Send welcome email
+        // TODO: Send welcome email with generated password
 
         // Notify admin of new client registration
         $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
@@ -55,7 +57,9 @@ class ClientController extends Controller
             'message' => 'Client created successfully',
             'user' => $user,
             'client' => $client,
-        ], 201);
+        ], 201)->header('Access-Control-Allow-Origin', '*')
+                  ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE')
+                  ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 
     /**
@@ -88,5 +92,20 @@ class ClientController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Generate a secure random password
+     */
+    private function generateSecurePassword($length = 12)
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        $password = '';
+        
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $characters[rand(0, strlen($characters) - 1)];
+        }
+        
+        return $password;
     }
 }
