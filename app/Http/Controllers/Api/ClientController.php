@@ -32,9 +32,22 @@ class ClientController extends Controller
             if (empty($request->company_name)) $errors['company_name'] = ['Company name is required'];
             if (empty($request->campaign)) $errors['campaign'] = ['Campaign data is required'];
             
-            // Check if email already exists
-            if (User::where('email', $request->email)->exists()) {
-                $errors['email'] = ['Email already exists'];
+            // Check if email already exists and validate campaign constraints
+            $existingUser = User::where('email', $request->email)->first();
+            if ($existingUser) {
+                // Check if existing user has active campaigns
+                $now = Carbon::now();
+                $hasActiveCampaign = Campaign::where('client_id', $existingUser->id)
+                    ->where(function ($q) use ($now) {
+                        $q->whereNull('end_date')
+                          ->orWhere('end_date', '>=', $now);
+                    })->exists();
+
+                if ($hasActiveCampaign) {
+                    $errors['email'] = ['This email already has an active campaign. You can only create a new campaign after the current campaign ends.'];
+                } else {
+                    $errors['email'] = ['Email already exists'];
+                }
             }
             
             // Campaign validation
@@ -102,20 +115,8 @@ class ClientController extends Controller
 
                 Log::info('Client created successfully', ['client_id' => $client->id, 'user_id' => $user->id]);
 
-                // Prevent multiple overlapping campaigns: user may only run one campaign at a time
-                $now = Carbon::now();
-                $hasActive = Campaign::where('client_id', $user->id)
-                    ->where(function ($q) use ($now) {
-                        $q->whereNull('end_date')
-                          ->orWhere('end_date', '>=', $now);
-                    })->exists();
-
-                if ($hasActive) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'You already have an active campaign. You can only create a new campaign after the current campaign ends.'
-                    ], 422);
-                }
+                // Note: Active campaign check is now handled during email validation above
+                // This ensures existing users can't create overlapping campaigns
 
                 // Create the campaign for the new client
                 $campaign = new Campaign();
