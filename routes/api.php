@@ -88,6 +88,7 @@ Route::post('/qr/regenerate/{dcdId}', [QRController::class, 'regenerate']);
 Route::get('/scan/validate', [ScanController::class, 'validateQr']);
 Route::get('/scans/analytics/{campaignId}', [ScanController::class, 'analytics']);
 Route::post('/referral/track', [ReferralController::class, 'track']);
+Route::post('/referral/validate', [ReferralController::class, 'validateCode']);
 Route::post('/earnings/calculate', [PayoutController::class, 'calculateEarnings']);
 Route::post('/ventureshares/allocate', [VentureSharesController::class, 'allocate']);
 Route::post('/ventureshares/batch-allocate', [VentureSharesController::class, 'batchAllocate']);
