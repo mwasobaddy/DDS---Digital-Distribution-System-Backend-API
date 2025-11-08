@@ -25,7 +25,6 @@ class ClientController extends Controller
             'account_type' => 'nullable|string',
             'country' => 'nullable|string',
             'referral_code' => 'nullable|string',
-            'password' => 'nullable|string', // Allow password to be missing from request
             'billing_info' => 'nullable|array',
             'campaign' => 'required|array',
             'campaign.name' => 'required|string',
@@ -46,7 +45,8 @@ class ClientController extends Controller
 
         // Always generate a secure password for the client
         $plainPassword = $this->generateSecurePassword();
-        $password = Hash::make($plainPassword);
+        // Don't pre-hash the password - Laravel's 'hashed' cast will handle it
+        $password = $plainPassword;
 
         $user = User::create([
             'name' => $request->name,
