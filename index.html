@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Registration</title>
+    
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    
+    <!-- SHARED CSS ASSETS -->
+    <link rel="stylesheet" href="../assets/css/core.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/layouts.css">
+    
+    <!-- CLIENT-SPECIFIC CSS -->
+    <link rel="stylesheet" href="css/client-signup.css">
+    
+    <!-- Environment Configuration -->
+    <script>
+        window.TURNSTILE_SITEKEY = "1x00000000000000000000AA";
+    </script>
+</head>
+<body>
+    <!-- Header with Country Flag -->
+    <header class="site-header">
+        <div class="main-nav">
+            <div class="main-nav__wrapper">
+                <div class="logo">
+                    <a href="https://daya.africa/" rel="home" aria-current="page">
+                        <img width="208" height="62" src="https://daya.africa/wp-content/uploads/2024/10/cropped-Daya-Main-Logo.png" alt="Daya" decoding="async" />
+                    </a>
+                </div>
+                <div class="country-flag-container">
+                    <img id="countryFlag" class="country-flag" src="" alt="Country Flag">
+                    <span id="countryName" class="country-name">Detecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Form Content -->
+    <div class="form-container">
+        <div class="form-header">
+            <h1>Client Registration & Campaign Setup</h1>
+            <div class="stroke"></div>
+            <p>Create your account and launch your first campaign in one simple process</p>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="progress-indicator">
+            <div class="progress-steps">
+                <div class="step active" data-step="1" title="Click to jump to Account Setup">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Account Setup</div>
+                </div>
+                <div class="step" data-step="2" title="Click to jump to Campaign Details">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Campaign Details</div>
+                </div>
+                <div class="step" data-step="3" title="Click to jump to Targeting">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Targeting</div>
+                </div>
+                <div class="step" data-step="4" title="Click to jump to Review & Submit">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Review & Submit</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 25%"></div>
+            </div>
+        </div>
+
+        <!-- Message Display Area -->
+        <div id="message"></div>
+
+        <!-- Required Field Helper -->
+        <div class="required-helper">
+            All fields marked with <span style="color: #ef4444; font-weight: bold;">*</span> are required
+        </div>
+
+        <form id="clientForm">
+            <!-- STEP 1: Client Account Setup -->
+            <div class="form-step active" id="step1">
+                <div class="form-section">
+                    <h3>Create Your Account</h3>
+                    <p class="section-description">Set up your client profile to get started</p>
+                    
+                    <!-- Account Type -->
+                    <label for="account_type" class="required">Account Type</label>
+                    <select name="account_type" id="account_type" required>
+                        <option value="">Select Account Type</option>
+                        <option value="startup">Startup</option>
+                        <option value="artist">Artist</option>
+                        <option value="label">Label</option>
+                        <option value="ngo">NGO</option>
+                        <option value="agency">Agency</option>
+                        <option value="business">Business</option>
+                    </select>
+                    <div class="error-message" id="account_type_error">Account type is required</div>
+                    
+                    <!-- Business Name -->
+                    <label for="business_name" class="required">Business/Organization Name</label>
+                    <input type="text" name="business_name" id="business_name" required placeholder="Legal name or stage name">
+                    <div class="error-message" id="business_name_error">Business name is required</div>
+                    
+                    <!-- Email Address -->
+                    <label for="email" class="required">Email Address</label>
+                    <input type="email" name="email" id="email" required placeholder="primary@email.com">
+                    <div class="error-message" id="email_error">Valid email address is required</div>
+
+                    <!-- Phone Number -->
+                    <label for="phoneInput" class="required">Phone Number</label>
+                    <input type="tel" name="phone" id="phoneInput" required placeholder="e.g., 0712 345678">
+                    <div class="error-message" id="phone_error">Valid phone number is required</div>
+
+                    <!-- Country -->
+                    <label for="country" class="required">Country</label>
+                    <select name="country" id="country" required>
+                        <option value="">Select Country</option>
+                        <option value="kenya">Kenya</option>
+                        <option value="nigeria">Nigeria</option>
+                    </select>
+                    <div class="error-message" id="country_error">Country is required</div>
+
+                    <!-- Referral Code (Optional) -->
+                    <label for="referral_code">Referral Code (Optional)</label>
+                    <input type="text" name="referral_code" id="referral_code" placeholder="Enter DA or DCD referral code">
+                    <div class="info-message">If you were referred by a Digital Ambassador or Distributor</div>
+                    <div class="error-message" id="referral_code_error"></div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn-next" onclick="validateStep(1)">Continue to Campaign Details →</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Campaign Basics -->
+            <div class="form-step" id="step2">
+                <div class="form-section">
+                    <h3>Campaign Information</h3>
+                    <p class="section-description">Tell us about your first campaign</p>
+                    
+                    <!-- Campaign Name -->
+                    <label for="campaign_name" class="required">Campaign Name</label>
+                    <input type="text" name="campaign_name" id="campaign_name" required placeholder="e.g., Summer Music Launch 2025">
+                    <div class="error-message" id="campaign_name_error">Campaign name is required</div>
+                    
+                    <!-- Campaign Type -->
+                    <label for="campaign_type" class="required">Campaign Type</label>
+                    <select name="campaign_type" id="campaign_type" required>
+                        <option value="">Select Campaign Type</option>
+                        <option value="music">Music</option>
+                        <option value="app">App</option>
+                        <option value="movie">Movie</option>
+                        <option value="product_launch">Product Launch</option>
+                        <option value="event">Event</option>
+                    </select>
+                    <div class="error-message" id="campaign_type_error">Campaign type is required</div>
+
+                    <!-- Digital Product Link -->
+                    <label for="product_link" class="required">Digital Product Link</label>
+                    <input type="url" name="product_link" id="product_link" required 
+                           placeholder="https://spotify.com/album/... or https://yourapp.store/...">
+                    <div class="info-message">Link to your content (Spotify, YouTube, App Store, website, etc.)</div>
+                    <div class="error-message" id="product_link_error">Valid product link is required</div>
+                    
+                    <!-- Explainer Video (Optional) -->
+                    <label for="explainer_video">Explainer Video URL (Optional)</label>
+                    <input type="url" name="explainer_video" id="explainer_video" 
+                           placeholder="https://youtube.com/watch/...">
+                    <div class="info-message">Help DCDs understand how to promote your content effectively</div>
+                    <div class="error-message" id="explainer_video_error"></div>
+
+                    <!-- Campaign Objective -->
+                    <label for="campaign_objective" class="required">Campaign Objective</label>
+                    <select name="campaign_objective" id="campaign_objective" required>
+                        <option value="">Select Objective</option>
+                        <option value="music_promotion">Music Promotion</option>
+                        <option value="app_downloads">App Downloads</option>
+                        <option value="brand_awareness">Brand Awareness</option>
+                        <option value="product_launch">Product Launch</option>
+                        <option value="event_promotion">Event Promotion</option>
+                        <option value="social_cause">Social Cause</option>
+                    </select>
+                    <div class="error-message" id="campaign_objective_error">Campaign objective is required</div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn-prev" onclick="goToStep(1)">← Back</button>
+                    <button type="button" class="btn-next" onclick="validateStep(2)">Continue to Targeting →</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Targeting & Budget -->
+            <div class="form-step" id="step3">
+                <div class="form-section">
+                    <h3>Budget & Targeting</h3>
+                    <p class="section-description">Define your audience, budget, and content preferences</p>
+                    
+                    <!-- Budget -->
+                    <label for="budget" class="required">Budget (KES)</label>
+                    <input type="number" name="budget" id="budget" required min="500" step="100" 
+                           placeholder="5000" value="5000">
+                    <div class="info-message">1 Credit = 10 KES = 10 verified clicks</div>
+                    <div class="error-message" id="budget_error">Budget is required (minimum 500 KES)</div>
+
+                    <!-- Content Safety Preference -->
+                    <label class="required">Content Safety Preference</label>
+                    <div class="checkbox-group safety-preferences">
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="safety_preference" value="safe_for_kids" id="safe_for_kids">
+                            <label for="safe_for_kids">Safe for Kids</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="safety_preference" value="teen_appropriate" id="teen_appropriate">
+                            <label for="teen_appropriate">Teen Appropriate (13+)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="safety_preference" value="adult_content" id="adult_content">
+                            <label for="adult_content">Adult Content (18+)</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" name="safety_preference" value="no_restrictions" id="no_restrictions">
+                            <label for="no_restrictions">No Restrictions</label>
+                        </div>
+                    </div>
+                    <div class="info-message">Help us match your content with appropriate Digital Ambassadors</div>
+                    <div class="error-message" id="safety_preference_error">Please select a content safety preference</div>
+
+                    <!-- Target Regions -->
+                    <label class="required">Target Regions</label>
+                    <div class="geo-targeting">
+                        <!-- Add Country field here -->
+                        <div class="geo-group">
+                            <div>
+                                <label class="required">Country</label>
+                                <select name="target_country" id="target_country" required>
+                                    <option value="">Select Country</option>
+                                    <option value="kenya">Kenya</option>
+                                    <option value="nigeria">Nigeria</option>
+                                </select>
+                            </div>
+                            <div>
+                                <!-- Spacer to maintain grid layout -->
+                                <div style="visibility: hidden;">
+                                    <label>Spacer</label>
+                                    <select disabled></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="geo-group">
+                            <div>
+                                <label class="required" id="county-label">County/State</label>
+                                <select name="county" id="county" required disabled>
+                                    <option value="">Select Country First</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="required" id="subcounty-label">Sub-county/LGA</label>
+                                <select name="subcounty" id="subcounty" required disabled>
+                                    <option value="">Select County First</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="geo-group">
+                            <div>
+                                <label class="required">Ward</label>
+                                <select name="ward" id="ward" required disabled>
+                                    <option value="">Select Sub-county First</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <!-- Spacer to maintain grid layout -->
+                                <div style="visibility: hidden;">
+                                    <label>Spacer</label>
+                                    <select disabled></select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="error-message" id="geo_targeting_error">Please complete all geographic targeting fields</div>
+
+                    <!-- Business Type Targeting -->
+                    <label class="required">Business Type Targeting</label>
+                    <div class="business-types-container" id="businessTypesContainer">
+                        <!-- Business types will be populated dynamically from shared source -->
+                    </div>
+                    <div class="error-message" id="business_types_error">Please select at least one business type</div>
+
+                    <!-- Campaign Duration -->
+                    <label class="required">Campaign Duration</label>
+                    <div class="date-range-group">
+                        <div>
+                            <label for="start_date">Start Date</label>
+                            <input type="date" name="start_date" id="start_date" required>
+                        </div>
+                        <div>
+                            <label for="end_date">End Date</label>
+                            <input type="date" name="end_date" id="end_date" required>
+                        </div>
+                    </div>
+                    <div class="error-message" id="date_error">Please select both start and end dates</div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn-prev" onclick="goToStep(2)">← Back</button>
+                    <button type="button" class="btn-next" onclick="validateStep(3)">Continue to Review →</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Review & Submit -->
+            <div class="form-step" id="step4">
+                <div class="form-section">
+                    <h3>Review Your Information</h3>
+                    <p class="section-description">Please review all details before submitting your registration</p>
+                    
+                    <!-- Account Information Review -->
+                    <div class="review-section">
+                        <h4>Account Information</h4>
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <span class="review-label">Account Type</span>
+                                <span class="review-value" id="review_account_type">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Business Name</span>
+                                <span class="review-value" id="review_business_name">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Email</span>
+                                <span class="review-value" id="review_email">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Phone</span>
+                                <span class="review-value" id="review_phone">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Country</span>
+                                <span class="review-value" id="review_country">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Referral Code</span>
+                                <span class="review-value" id="review_referral_code">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campaign Information Review -->
+                    <div class="review-section">
+                        <h4>Campaign Information</h4>
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <span class="review-label">Campaign Name</span>
+                                <span class="review-value" id="review_campaign_name">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Campaign Type</span>
+                                <span class="review-value" id="review_campaign_type">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Product Link</span>
+                                <span class="review-value" id="review_product_link">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Explainer Video</span>
+                                <span class="review-value" id="review_explainer_video">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Campaign Objective</span>
+                                <span class="review-value" id="review_campaign_objective">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Targeting & Budget Review -->
+                    <div class="review-section">
+                        <h4>Targeting & Budget</h4>
+                        <div class="review-grid">
+                            <div class="review-item">
+                                <span class="review-label">Budget</span>
+                                <span class="review-value" id="review_budget">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Content Safety</span>
+                                <span class="review-value" id="review_safety">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Target Country</span>
+                                <span class="review-value" id="review_target_country">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">County</span>
+                                <span class="review-value" id="review_county">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Sub-county</span>
+                                <span class="review-value" id="review_subcounty">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Ward</span>
+                                <span class="review-value" id="review_ward">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Business Types</span>
+                                <span class="review-value" id="review_business_types">-</span>
+                            </div>
+                            <div class="review-item">
+                                <span class="review-label">Campaign Duration</span>
+                                <span class="review-value" id="review_duration">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms & Conditions Agreement -->
+                    <div class="form-section">
+                        <h3>Terms & Conditions</h3>
+                        <div class="agreement-item">
+                            <input type="checkbox" name="terms" id="terms" required> 
+                            <label for="terms" class="required">
+                                I agree to Daya's <a href="https://www.daya.africa/TnC" target="_blank" style="color: var(--dcd-primary); text-decoration: underline;">Client Terms & Conditions</a>
+                            </label>
+                        </div>
+                        <div class="error-message" id="terms_error">You must agree to the Terms & Conditions</div>
+                    </div>
+
+                    <!-- Security Section -->
+                    <div class="security-section">
+                        <h4>Secure Submission</h4>
+                        <p>Your information is protected with enterprise-grade security. All data is encrypted and securely transmitted.</p>
+                        
+                        <!-- Cloudflare Turnstile -->
+                        <div class="cf-turnstile" data-sitekey="1x00000000000000000000AA" data-callback="javascriptCallback"></div>
+                        <div class="error-message" id="turnstile_error">Please complete the security verification</div>
+                        
+                        <div class="info-message" style="text-align: center; margin-top: 1rem;">
+                            By submitting, you agree to our Terms of Service and Privacy Policy
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-actions">
+                    <button type="button" class="btn-prev" onclick="goToStep(3)">← Back</button>
+                    <button type="button" id="submitBtn" onclick="submitForm()">Submit Registration</button>
+                </div>
+            </div>
+        </form>
+
+        <div class="form-footer">
+            <p>Need help? Contact our support team at <a href="mailto:support@daya.africa">support@daya.africa</a></p>
+        </div>
+    </div>
+
+    <!-- SHARED JAVASCRIPT ASSETS -->
+    <script src="../assets/js/utilities.js"></script>
+    <script src="../assets/js/geographic.js"></script>
+    <script src="../assets/js/validation.js"></script>
+    <script src="../assets/js/security.js"></script>
+    <script src="../assets/js/business-types.js"></script>
+    
+    <!-- CLIENT-SPECIFIC JAVASCRIPT -->
+    <script src="js/client-form.js"></script>
+    
+    <!-- INITIALIZATION SCRIPT -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('🚀 Initializing client form...');
+                
+                // Initialize Turnstile
+                const turnstileWidget = document.querySelector('.cf-turnstile');
+                if (turnstileWidget && window.TURNSTILE_SITEKEY) {
+                    turnstileWidget.setAttribute('data-sitekey', window.TURNSTILE_SITEKEY);
+                }
+
+                // Load geographic data and setup cascading
+                console.log('🌍 Loading geographic data...');
+                await loadGeographicData();
+                setupGeographicCascading();
+                
+                // DETECT USER COUNTRY AND LOAD FLAG - THIS WAS MISSING!
+                console.log('🇰🇪 Detecting user country...');
+                detectUserCountry();
+                
+                // Initialize business types from shared source
+                console.log('🏢 Initializing business types...');
+                initializeBusinessTypes();
+                
+                // Set default dates for campaign duration
+                const today = new Date();
+                const oneMonthLater = new Date(today);
+                oneMonthLater.setMonth(today.getMonth() + 1);
+                
+                document.getElementById('start_date').valueAsDate = today;
+                document.getElementById('end_date').valueAsDate = oneMonthLater;
+                
+                // Initialize client-specific functionality
+                console.log('⚙️ Initializing client form functionality...');
+                if (typeof initializeClientForm === 'function') {
+                    initializeClientForm();
+                }
+                
+                console.log('✅ Client form initialization complete!');
+                
+            } catch (error) {
+                console.error('❌ Failed to initialize client form:', error);
+                showMessage('Error loading form. Please refresh the page.', 'error');
+            }
+        });
+
+        // Initialize business types from shared source
+        function initializeBusinessTypes() {
+            const businessTypesContainer = document.getElementById('businessTypesContainer');
+            if (businessTypesContainer && typeof renderBusinessTypesCheckboxes === 'function') {
+                renderBusinessTypesCheckboxes(businessTypesContainer);
+                setupBusinessTypeValidation();
+            } else {
+                console.warn('⚠️ Business types container or render function not found');
+            }
+        }
+
+        // Setup business type validation
+        function setupBusinessTypeValidation() {
+            const checkboxes = document.querySelectorAll('input[name="business_types[]"]');
+            if (checkboxes.length > 0) {
+                checkboxes.forEach(checkbox => {
+                    checkbox.addEventListener('change', validateBusinessTypes);
+                });
+            }
+        }
+
+        // Validate business types selection
+        function validateBusinessTypes() {
+            const checkedBoxes = document.querySelectorAll('input[name="business_types[]"]:checked');
+            const errorElement = document.getElementById('business_types_error');
+            
+            if (checkedBoxes.length === 0) {
+                if (errorElement) errorElement.style.display = 'block';
+                return false;
+            } else {
+                if (errorElement) errorElement.style.display = 'none';
+                return true;
+            }
+        }
+
+        // Cloudflare Turnstile callback
+        function javascriptCallback() {
+            console.log('✅ Cloudflare Turnstile verified');
+            document.getElementById('turnstile_error').style.display = 'none';
+        }
+
+        // Helper function to show messages
+        function showMessage(message, type) {
+            const messageElement = document.getElementById('message');
+            if (messageElement) {
+                messageElement.textContent = message;
+                messageElement.className = type + '-message';
+                messageElement.style.display = 'block';
+                
+                if (type === 'success') {
+                    setTimeout(() => {
+                        messageElement.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        }
+        async function submitForm() {
+            try {
+                // Validate final step
+                if (!validateStep(4)) {
+                    return;
+                }
+
+                // Disable submit button
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+
+                // Collect form data
+                const formData = {
+                    name: document.getElementById('business_name').value.trim(),
+                    company_name: document.getElementById('business_name').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phoneInput').value.trim(),
+                    account_type: document.getElementById('account_type').value,
+                    country: document.getElementById('country').value,
+                    referral_code: document.getElementById('referral_code').value.trim() || null,
+                    // Campaign data (for future use)
+                    campaign: {
+                        name: document.getElementById('campaign_name').value.trim(),
+                        type: document.getElementById('campaign_type').value,
+                        product_link: document.getElementById('product_link').value.trim(),
+                        explainer_video: document.getElementById('explainer_video').value.trim() || null,
+                        objective: document.getElementById('campaign_objective').value,
+                        budget: parseInt(document.getElementById('budget').value),
+                        safety_preferences: Array.from(document.querySelectorAll('input[name="safety_preference"]:checked')).map(cb => cb.value),
+                        target_country: document.getElementById('target_country').value,
+                        county: document.getElementById('county').value,
+                        subcounty: document.getElementById('subcounty').value,
+                        ward: document.getElementById('ward').value,
+                        business_types: Array.from(document.querySelectorAll('input[name="business_types[]"]:checked')).map(cb => cb.value),
+                        start_date: document.getElementById('start_date').value,
+                        end_date: document.getElementById('end_date').value
+                    }
+                };
+
+                console.log('📤 Submitting form data:', formData);
+
+                // Submit client data to API
+                const response = await fetch('https://indigo-gerbil-425067.hostingersite.com/api/client/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    console.log('✅ Client created successfully:', result);
+                    
+                    // Show success message with password info if available
+                    let successMessage = 'Registration successful! Welcome to Daya.';
+                    if (result.generated_password) {
+                        successMessage += ' Your login credentials have been sent to your email.';
+                        console.log('Generated password:', result.generated_password);
+                    } else {
+                        successMessage += ' You will receive login credentials via email.';
+                    }
+                    
+                    showMessage(successMessage, 'success');
+                    
+                    // Reset form or redirect
+                    setTimeout(() => {
+                        window.location.href = 'https://daya.africa/thank-you';
+                    }, 3000);
+                } else {
+                    console.error('❌ API Error:', result);
+                    let errorMessage = 'Registration failed. Please try again.';
+                    
+                    if (result.errors) {
+                        const errors = Object.values(result.errors).flat();
+                        errorMessage = errors.join('. ');
+                    } else if (result.message) {
+                        errorMessage = result.message;
+                    }
+                    
+                    showMessage(errorMessage, 'error');
+                }
+
+            } catch (error) {
+                console.error('❌ Submission error:', error);
+                showMessage('Network error. Please check your connection and try again.', 'error');
+            } finally {
+                // Re-enable submit button
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Registration';
+            }
+        }
+
+        // Global functions for HTML onclick handlers
+        window.validateStep = validateStep;
+        window.goToStep = goToStep;
+        window.submitForm = submitForm;
+    </script>
+</body>
+</html>
