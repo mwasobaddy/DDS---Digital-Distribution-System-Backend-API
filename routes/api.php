@@ -21,12 +21,28 @@ Route::get('/user', function (Request $request) {
 
 // Test endpoint to verify deployment
 Route::get('/test', function () {
-    return response()->json([
-        'status' => 'success',
-        'message' => 'DDS API is working!',
-        'timestamp' => now(),
-        'version' => '1.0.0'
-    ]);
+    try {
+        // Test basic Laravel functionality
+        $timestamp = now();
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'DDS API is working!',
+            'timestamp' => $timestamp,
+            'version' => '1.0.0',
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version()
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('API Test Error: ' . $e->getMessage());
+        return response()->json([
+            'status' => 'error',
+            'message' => 'API test failed',
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
 });
 
 // DDS API Routes
