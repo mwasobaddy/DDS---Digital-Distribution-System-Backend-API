@@ -45,8 +45,10 @@ class ClientController extends Controller
 
         // Always generate a secure password for the client
         $plainPassword = $this->generateSecurePassword();
-        // Don't pre-hash the password - Laravel's 'hashed' cast will handle it
-        $password = $plainPassword;
+        if (empty($plainPassword)) {
+            return response()->json(['error' => 'Failed to generate password'], 500);
+        }
+        $password = Hash::make($plainPassword);
 
         $user = User::create([
             'name' => $request->name,
