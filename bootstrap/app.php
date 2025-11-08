@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias('signed', \Illuminate\Routing\Middleware\ValidateSignature::class);
+        
         $middleware->append(function ($request, $next) {
             $response = $next($request);
             
