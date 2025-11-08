@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class CampaignController extends Controller
 {
@@ -25,10 +27,21 @@ class CampaignController extends Controller
             'target_regions' => 'nullable|array',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
+            'client_id' => 'nullable|integer|exists:users,id', // Allow specifying client_id
         ]);
 
-        // Assume authenticated client
-        $clientId = 1; // TODO: from auth
+        // Get client ID from auth or request parameter
+        $clientId = $request->client_id ?: Auth::id();
+        
+        if (!$clientId) {
+            return response()->json(['error' => 'Client authentication required'], 401);
+        }
+
+        // Verify the client exists and has client role
+        $client = Client::where('user_id', $clientId)->first();
+        if (!$client) {
+            return response()->json(['error' => 'Client account not found'], 404);
+        }
 
         $campaign = Campaign::create([
             'id' => strtoupper('CAMP_' . uniqid()),
@@ -56,6 +69,8 @@ class CampaignController extends Controller
         return response()->json([
             'message' => 'Campaign created successfully',
             'campaign' => $campaign,
-        ], 201);
+        ], 201)->header('Access-Control-Allow-Origin', '*')
+                ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE')
+                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     }
 }
