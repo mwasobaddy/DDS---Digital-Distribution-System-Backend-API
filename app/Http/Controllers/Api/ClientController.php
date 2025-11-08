@@ -111,7 +111,10 @@ class ClientController extends Controller
                     })->exists();
 
                 if ($hasActive) {
-                    throw new \Exception('You already have an active campaign. You can only create a new campaign after the current campaign ends.');
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'You already have an active campaign. You can only create a new campaign after the current campaign ends.'
+                    ], 422);
                 }
 
                 // Create the campaign for the new client
