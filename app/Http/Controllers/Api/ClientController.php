@@ -20,38 +20,39 @@ class ClientController extends Controller
     public function create(Request $request)
     {
         try {
-            // Custom validation with better error handling
-            $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email',
-                'phone' => 'required|string|max:20',
-                'company_name' => 'required|string|max:255',
-                'account_type' => 'nullable|string|max:50',
-                'country' => 'nullable|string|max:100',
-                'referral_code' => 'nullable|string|max:50',
-                'billing_info' => 'nullable|array',
-                'campaign' => 'required|array',
-                'campaign.name' => 'required|string|max:255',
-                'campaign.type' => 'nullable|string|max:100',
-                'campaign.product_link' => 'required|url|max:500',
-                'campaign.explainer_video' => 'nullable|url|max:500',
-                'campaign.objective' => 'nullable|string|max:255',
-                'campaign.budget' => 'required|numeric|min:0|max:9999999.99',
-                'campaign.safety_preferences' => 'nullable|array',
-                'campaign.target_country' => 'nullable|string|max:100',
-                'campaign.county' => 'nullable|string|max:100',
-                'campaign.subcounty' => 'nullable|string|max:100',
-                'campaign.ward' => 'nullable|string|max:100',
-                'campaign.business_types' => 'nullable|array',
-                'campaign.start_date' => 'nullable|date',
-                'campaign.end_date' => 'nullable|date|after:campaign.start_date',
-            ]);
-
-            if ($validator->fails()) {
+            // Skip traditional validation and validate manually
+            $errors = [];
+            
+            // Manual validation to avoid password field issues
+            if (empty($request->name)) $errors['name'] = ['Name is required'];
+            if (empty($request->email)) $errors['email'] = ['Email is required'];
+            if (!filter_var($request->email, FILTER_VALIDATE_EMAIL)) $errors['email'] = ['Email must be valid'];
+            if (empty($request->phone)) $errors['phone'] = ['Phone is required'];
+            if (empty($request->company_name)) $errors['company_name'] = ['Company name is required'];
+            if (empty($request->campaign)) $errors['campaign'] = ['Campaign data is required'];
+            
+            // Check if email already exists
+            if (User::where('email', $request->email)->exists()) {
+                $errors['email'] = ['Email already exists'];
+            }
+            
+            // Campaign validation
+            if ($request->campaign) {
+                if (empty($request->campaign['name'])) $errors['campaign.name'] = ['Campaign name is required'];
+                if (empty($request->campaign['product_link'])) $errors['campaign.product_link'] = ['Product link is required'];
+                if (!empty($request->campaign['product_link']) && !filter_var($request->campaign['product_link'], FILTER_VALIDATE_URL)) {
+                    $errors['campaign.product_link'] = ['Product link must be a valid URL'];
+                }
+                if (empty($request->campaign['budget']) || !is_numeric($request->campaign['budget']) || $request->campaign['budget'] < 0) {
+                    $errors['campaign.budget'] = ['Budget must be a valid positive number'];
+                }
+            }
+            
+            if (!empty($errors)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $errors
                 ], 422);
             }
 
