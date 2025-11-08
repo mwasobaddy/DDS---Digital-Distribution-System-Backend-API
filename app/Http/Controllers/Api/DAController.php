@@ -8,45 +8,61 @@ use App\Models\User;
 use App\Models\DA;
 use App\Models\DCD;
 use App\Mail\AdminNewUserNotification;
+use App\Mail\DAWelcomeNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DAController extends Controller
 {
     public function create(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string',
+        // Custom validation for DA registration
+        $validator = Validator::make($request->all(), [
+            'referral_code' => 'required|string',
+            'full_name' => 'required|string|min:2|max:255',
+            'national_id' => 'required|string|unique:das',
+            'dob' => 'required|date|before:today|after:' . now()->subYears(100)->format('Y-m-d'),
+            'gender' => 'required|in:male,female',
             'email' => 'required|email|unique:users',
-            'phone' => 'required|string',
-            'password' => 'required|string|min:8',
-            'referrer_code' => 'required|string',
-            'national_id' => 'required|string',
-            'dob' => 'required|date',
-            'gender' => 'required|string',
             'country' => 'required|string',
-            'county' => 'nullable|string',
-            'sub_county' => 'nullable|string',
-            'ward' => 'nullable|string',
-            'address' => 'nullable|string',
-            'social_platforms' => 'nullable|array',
-            'followers_range' => 'nullable|string',
-            'preferred_channel' => 'nullable|string',
-            'preferred_wallet_type' => 'nullable|string',
-            'wallet_pin' => 'nullable|digits:4',
-            'consent_terms' => 'required|boolean',
-            'consent_data' => 'required|boolean',
-            'consent_ethics' => 'required|boolean',
+            'county' => 'required|string',
+            'subcounty' => 'required|string',
+            'ward' => 'required|string',
+            'address' => 'required|string',
+            'phone' => 'required|string|regex:/^\+?[1-9]\d{1,14}$/',
+            'platforms' => 'required|array|min:1',
+            'platforms.*' => 'string|in:instagram,twitter,facebook,whatsapp,linkedin,tiktok',
+            'followers' => 'required|string|in:500-1000,1000-5000,5000-50000,50000-100000,100000-500000,500000-1000000',
+            'communication_channel' => 'required|string|in:whatsapp,email,in-app',
+            'wallet_type' => 'required|string|in:personal,business',
+            'wallet_pin' => 'required|digits:4',
+            'confirm_pin' => 'required|digits:4|same:wallet_pin',
+            'terms' => 'required|accepted',
+            // 'cf-turnstile-response' => 'required|string', // Commented out for development
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Verify Turnstile token (you may need to implement this)
+        // For now, we'll skip this in development
+
+        // Generate a random password for the user
+        $generatedPassword = Str::random(12);
+
         $user = User::create([
-            'name' => $request->name,
+            'name' => $request->full_name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($generatedPassword),
             'role' => 'da',
         ]);
 
@@ -55,15 +71,15 @@ class DAController extends Controller
         $referredById = null;
         $referrerType = null;
 
-        if ($request->referrer_code) {
+        if ($request->referral_code) {
             // Check if it's a DA referral code
-            $referrer = DA::where('referral_code', $request->referrer_code)->first();
+            $referrer = DA::where('referral_code', $request->referral_code)->first();
             if ($referrer) {
                 $referredById = $referrer->id;
                 $referrerType = 'da';
             } else {
                 // Check if it's a DCD referral code
-                $referrer = DCD::where('referral_code', $request->referrer_code)->first();
+                $referrer = DCD::where('referral_code', $request->referral_code)->first();
                 if ($referrer) {
                     $referredById = $referrer->id;
                     $referrerType = 'dcd';
@@ -95,17 +111,17 @@ class DAController extends Controller
             'gender' => $request->gender,
             'country' => $request->country,
             'county' => $request->county,
-            'sub_county' => $request->sub_county,
+            'sub_county' => $request->subcounty,
             'ward' => $request->ward,
             'address' => $request->address,
-            'social_platforms' => $request->social_platforms,
-            'followers_range' => $request->followers_range,
-            'preferred_channel' => $request->preferred_channel,
-            'preferred_wallet_type' => $request->preferred_wallet_type,
-            'wallet_pin_hash' => $request->wallet_pin ? Hash::make($request->wallet_pin) : null,
-            'consent_terms' => $request->consent_terms,
-            'consent_data' => $request->consent_data,
-            'consent_ethics' => $request->consent_ethics,
+            'social_platforms' => $request->platforms,
+            'followers_range' => $request->followers,
+            'preferred_channel' => $request->communication_channel,
+            'preferred_wallet_type' => $request->wallet_type,
+            'wallet_pin_hash' => Hash::make($request->wallet_pin),
+            'consent_terms' => $request->terms,
+            'consent_data' => true, // Assuming data consent is included in terms
+            'consent_ethics' => true, // Assuming ethics consent is included in terms
             'referred_by_da_id' => $referredById,
         ]);
 
@@ -117,42 +133,41 @@ class DAController extends Controller
         // Notify admin of new DA registration
         $this->notifyAdminOfNewRegistration('DA', $da->id, $user, $da);
 
-        // TODO: Send welcome email with referral code
+        // Send welcome email to the new DA
+        $this->sendWelcomeEmailToDA($user, $da, $generatedPassword, $referralCode);
 
         return response()->json([
-            'message' => 'DA created successfully',
-            'user' => $user,
-            'da' => $da,
+            'message' => 'Digital Ambassador account created successfully! Check your email for login details.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+            'da' => [
+                'id' => $da->id,
+                'referral_code' => $da->referral_code,
+                'venture_shares' => $da->venture_shares,
+            ],
         ], 201);
     }
 
     /**
-     * Notify admin of new user registration
+     * Send welcome email to the new DA
      */
-    private function notifyAdminOfNewRegistration(string $userType, int $userId, $user, $userModel)
+    private function sendWelcomeEmailToDA($user, $da, $password, $referralCode)
     {
-        $admin = Admin::getDefaultAdmin();
-        if (!$admin) {
-            Log::warning("No active admin found for {$userType} registration notification");
-            return;
-        }
-
         try {
-            // Send email notification to admin
-            Mail::to($admin->email)->send(new AdminNewUserNotification($userType, $user, $userModel, $admin));
+            Mail::to($user->email)->send(new DAWelcomeNotification($user, $da, $password, $referralCode));
 
-            Log::info("{$userType} registration notification email sent to admin", [
-                'user_type' => $userType,
-                'user_id' => $userId,
+            Log::info('DA welcome email sent successfully', [
+                'da_id' => $da->id,
                 'user_email' => $user->email,
-                'admin_id' => $admin->id,
-                'admin_email' => $admin->email,
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to send {$userType} registration notification email", [
-                'user_type' => $userType,
-                'user_id' => $userId,
-                'admin_id' => $admin->id,
+            Log::error('Failed to send DA welcome email', [
+                'da_id' => $da->id,
+                'user_email' => $user->email,
                 'error' => $e->getMessage(),
             ]);
         }

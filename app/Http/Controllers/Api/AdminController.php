@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Campaign;
 use App\Models\Scan;
 use App\Models\User;
@@ -88,6 +89,27 @@ class AdminController extends Controller
             'authenticated' => true,
             'action' => $request->action,
             'message' => 'Action authenticated successfully',
+        ]);
+    }
+
+    /**
+     * Get the default admin referral code
+     */
+    public function getReferralCode()
+    {
+        $admin = Admin::getDefaultAdmin();
+
+        if (!$admin || !$admin->default_referral_code) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No default referral code available'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'referral_code' => $admin->default_referral_code,
+            'admin_name' => $admin->name
         ]);
     }
 }

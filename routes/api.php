@@ -31,6 +31,7 @@ Route::get('/test', function () {
 
 // DDS API Routes
 Route::post('/da/create', [DAController::class, 'create']);
+Route::get('/admin/referral-code', [AdminController::class, 'getReferralCode']);
 Route::post('/dcd/create', [DCDController::class, 'create']);
 Route::post('/client/create', [ClientController::class, 'create']);
 Route::post('/campaign/create', [CampaignController::class, 'create']);
