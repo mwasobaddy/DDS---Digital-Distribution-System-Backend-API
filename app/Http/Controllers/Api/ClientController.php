@@ -24,33 +24,53 @@ class ClientController extends Controller
     public function create(Request $request)
     {
         try {
+            Log::info('Client creation request received', [
+                'email' => $request->email,
+                'name' => $request->name,
+                'has_campaign_data' => !empty($request->campaign)
+            ]);
+            
             // Skip traditional validation and validate manually
             $errors = [];
             
             // Manual validation to avoid password field issues
             if (empty($request->name)) $errors['name'] = ['Name is required'];
-            if (empty($request->email)) $errors['email'] = ['Email is required'];
-            if (!filter_var($request->email, FILTER_VALIDATE_EMAIL)) $errors['email'] = ['Email must be valid'];
+            if (empty($request->email)) {
+                $errors['email'] = ['Email is required'];
+            } elseif (!filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
+                $errors['email'] = ['Email must be valid'];
+            } else {
+                // Only check for existing user constraints if email is valid
+                $existingUser = User::where('email', $request->email)->first();
+                if ($existingUser) {
+                    Log::info('Found existing user', ['user_id' => $existingUser->id, 'email' => $existingUser->email]);
+                    
+                    // Check if existing user has active campaigns
+                    $now = Carbon::now();
+                    $hasActiveCampaign = Campaign::where('client_id', $existingUser->id)
+                        ->where(function ($q) use ($now) {
+                            $q->whereNull('end_date')
+                              ->orWhere('end_date', '>=', $now);
+                        })->exists();
+
+                    Log::info('Active campaign check', [
+                        'user_id' => $existingUser->id,
+                        'has_active_campaign' => $hasActiveCampaign,
+                        'current_time' => $now->toDateTimeString()
+                    ]);
+
+                    if ($hasActiveCampaign) {
+                        $errors['email'] = ['This email already has an active campaign. You can only create a new campaign after the current campaign ends.'];
+                    }
+                    // If no active campaign, we'll allow creating a new campaign for this existing user
+                } else {
+                    Log::info('No existing user found for email', ['email' => $request->email]);
+                }
+            }
+            
             if (empty($request->phone)) $errors['phone'] = ['Phone is required'];
             if (empty($request->company_name)) $errors['company_name'] = ['Company name is required'];
             if (empty($request->campaign)) $errors['campaign'] = ['Campaign data is required'];
-            
-            // Check if email already exists and validate campaign constraints
-            $existingUser = User::where('email', $request->email)->first();
-            if ($existingUser) {
-                // Check if existing user has active campaigns
-                $now = Carbon::now();
-                $hasActiveCampaign = Campaign::where('client_id', $existingUser->id)
-                    ->where(function ($q) use ($now) {
-                        $q->whereNull('end_date')
-                          ->orWhere('end_date', '>=', $now);
-                    })->exists();
-
-                if ($hasActiveCampaign) {
-                    $errors['email'] = ['This email already has an active campaign. You can only create a new campaign after the current campaign ends.'];
-                }
-                // If no active campaign, we'll allow creating a new campaign for this existing user
-            }
             
             // Campaign validation
             if ($request->campaign) {
@@ -85,17 +105,18 @@ class ClientController extends Controller
             // Use database transaction for data integrity
             return DB::transaction(function () use ($request, $plainPassword) {
                 
-                // Check if user already exists (from validation above)
+                // Check if user already exists and determine flow
                 $existingUser = User::where('email', $request->email)->first();
                 
                 if ($existingUser) {
-                    // Use existing user for new campaign
+                    // Use existing user for new campaign (no user creation needed)
                     $user = $existingUser;
                     Log::info('Using existing user for new campaign', ['user_id' => $user->id, 'email' => $user->email]);
                     
                     // Get or create client profile for existing user
                     $client = Client::where('user_id', $user->id)->first();
                     if (!$client) {
+                        // Create client profile if it doesn't exist
                         $client = new Client();
                         $client->user_id = $user->id;
                         $client->company_name = $request->company_name;
@@ -107,8 +128,12 @@ class ClientController extends Controller
                         $client->save();
                         Log::info('Client profile created for existing user', ['client_id' => $client->id, 'user_id' => $user->id]);
                     } else {
+                        // Client profile exists, just use it (don't update existing details)
                         Log::info('Using existing client profile', ['client_id' => $client->id, 'user_id' => $user->id]);
                     }
+                    
+                    // Flag to indicate existing user
+                    $isNewUser = false;
                 } else {
                     // Create new user with explicitly hashed password
                     $user = new User();
@@ -141,6 +166,9 @@ class ClientController extends Controller
                     }
 
                     Log::info('Client created successfully', ['client_id' => $client->id, 'user_id' => $user->id]);
+                    
+                    // Flag to indicate new user
+                    $isNewUser = true;
                 }
 
                 // Note: Active campaign check is now handled during email validation above
@@ -180,22 +208,22 @@ class ClientController extends Controller
                 Log::info('Campaign created successfully', ['campaign_id' => $campaign->id, 'client_id' => $client->id]);
 
                 // Send welcome email with generated password (only for new users)
-                if (!$existingUser) {
+                if ($isNewUser) {
                     $this->sendWelcomeEmail($user, $plainPassword);
                     // Notify admin of new client registration (only for new users)
                     $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
                 }
 
                 // Send campaign creation notification to user (for all users)
-                $this->sendCampaignCreationEmail($user, $campaign, $existingUser);
+                $this->sendCampaignCreationEmail($user, $campaign, !$isNewUser);
                 
                 // Send campaign approval request to admin (for all campaigns)
                 $this->sendCampaignApprovalRequestToAdmin($user, $campaign);
 
                 return response()->json([
                     'success' => true,
-                    'message' => $existingUser ? 'New campaign created for existing user successfully' : 'Client and campaign created successfully',
-                    'user_type' => $existingUser ? 'existing' : 'new',
+                    'message' => $isNewUser ? 'Client and campaign created successfully' : 'New campaign created for existing user successfully',
+                    'user_type' => $isNewUser ? 'new' : 'existing',
                     'data' => [
                         'user' => [
                             'id' => $user->id,
@@ -217,7 +245,7 @@ class ClientController extends Controller
                             'status' => $campaign->status
                         ]
                     ],
-                    'generated_password' => $existingUser ? null : $plainPassword
+                    'generated_password' => $isNewUser ? $plainPassword : null
                 ], 201)->header('Access-Control-Allow-Origin', '*')
                           ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE')
                           ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
