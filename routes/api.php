@@ -25,13 +25,35 @@ Route::get('/test', function () {
         // Test basic Laravel functionality
         $timestamp = now();
         
+        // Check environment
+        $env_checks = [
+            'APP_KEY_set' => !empty(config('app.key')),
+            'APP_ENV' => config('app.env'),
+            'APP_DEBUG' => config('app.debug'),
+            'DB_CONNECTION' => config('database.default'),
+            'LOG_CHANNEL' => config('logging.default'),
+        ];
+        
+        // Test database connection if configured
+        $db_status = 'not_tested';
+        try {
+            if (config('database.default') === 'mysql') {
+                \DB::connection()->getPdo();
+                $db_status = 'connected';
+            }
+        } catch (\Exception $e) {
+            $db_status = 'failed: ' . $e->getMessage();
+        }
+        
         return response()->json([
             'status' => 'success',
             'message' => 'DDS API is working!',
             'timestamp' => $timestamp,
             'version' => '1.0.0',
             'php_version' => PHP_VERSION,
-            'laravel_version' => app()->version()
+            'laravel_version' => app()->version(),
+            'environment' => $env_checks,
+            'database' => $db_status
         ]);
     } catch (\Exception $e) {
         \Log::error('API Test Error: ' . $e->getMessage());
@@ -40,7 +62,8 @@ Route::get('/test', function () {
             'message' => 'API test failed',
             'error' => $e->getMessage(),
             'file' => $e->getFile(),
-            'line' => $e->getLine()
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 });
