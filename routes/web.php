@@ -1,10 +1,24 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\ScanController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// Debug route for troubleshooting
+Route::get('/debug', function () {
+    return response()->json([
+        'status' => 'Laravel is working!',
+        'php_version' => PHP_VERSION,
+        'laravel_version' => app()->version(),
+        'environment' => app()->environment(),
+        'debug_mode' => config('app.debug'),
+        'timestamp' => now(),
+        'database_connection' => DB::connection()->getPdo() ? 'Connected' : 'Failed'
+    ]);
 });
 
 // DDS Scan Route
