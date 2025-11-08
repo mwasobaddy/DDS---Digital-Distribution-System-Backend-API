@@ -214,4 +214,48 @@ class DAController extends Controller
             ]);
         }
     }
+
+    /**
+     * Notify admin of new user registration
+     */
+    private function notifyAdminOfNewRegistration($userType, $userId, $user, $profile)
+    {
+        try {
+            // Get all active admins
+            $admins = Admin::where('is_active', true)->get();
+
+            if ($admins->isEmpty()) {
+                Log::warning('No active admins found to notify of new registration', [
+                    'user_type' => $userType,
+                    'user_id' => $userId,
+                ]);
+                return;
+            }
+
+            foreach ($admins as $admin) {
+                try {
+                    Mail::to($admin->email)->send(new AdminNewUserNotification($userType, $user, $profile, $admin));
+
+                    Log::info('Admin notification sent successfully', [
+                        'admin_email' => $admin->email,
+                        'user_type' => $userType,
+                        'user_id' => $userId,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send admin notification', [
+                        'admin_email' => $admin->email,
+                        'user_type' => $userType,
+                        'user_id' => $userId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error in notifyAdminOfNewRegistration', [
+                'user_type' => $userType,
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }
