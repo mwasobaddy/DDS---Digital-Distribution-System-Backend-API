@@ -9,14 +9,14 @@
 
     <p>Dear {{ $campaign->client->name ?? 'Client' }},</p>
 
-    <p>Your campaign "{{ $campaign->name }}" has been approved and is now active.</p>
+    <p>Your campaign "{{ $campaign->title }}" has been approved and is now active.</p>
 
     <h2>Campaign Details:</h2>
     <ul>
         <li><strong>Campaign ID:</strong> {{ $campaign->id }}</li>
-        <li><strong>Name:</strong> {{ $campaign->name }}</li>
+        <li><strong>Name:</strong> {{ $campaign->title }}</li>
         <li><strong>Product URL:</strong> {{ $campaign->product_url }}</li>
-        <li><strong>Earnings per Scan:</strong> ${{ number_format($campaign->earnings_per_scan, 2) }}</li>
+        <li><strong>Rate per Scan:</strong> KES {{ number_format($campaign->rate_per_scan, 2) }}</li>
         <li><strong>Status:</strong> Active</li>
     </ul>
 

@@ -9,7 +9,7 @@
 
     <p>Dear {{ $campaign->client->name ?? 'Client' }},</p>
 
-    <p>We regret to inform you that your campaign "{{ $campaign->name }}" has been reviewed and requires some changes before it can be approved.</p>
+    <p>We regret to inform you that your campaign "{{ $campaign->title }}" has been reviewed and requires some changes before it can be approved.</p>
 
     @if($reason)
         <h2>Reason for Rejection:</h2>
@@ -19,7 +19,7 @@
     <h2>Campaign Details:</h2>
     <ul>
         <li><strong>Campaign ID:</strong> {{ $campaign->id }}</li>
-        <li><strong>Name:</strong> {{ $campaign->name }}</li>
+        <li><strong>Name:</strong> {{ $campaign->title }}</li>
         <li><strong>Product URL:</strong> {{ $campaign->product_url }}</li>
     </ul>
 
