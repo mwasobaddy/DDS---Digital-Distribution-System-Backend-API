@@ -33,7 +33,7 @@ class DAController extends Controller
             'subcounty' => 'required|string',
             'ward' => 'required|string',
             'address' => 'required|string',
-            'phone' => 'required|string|regex:/^\+?[1-9]\d{1,14}$/',
+            'phone' => 'required|string|regex:/^[\+]?[1-9][\d\s\-\(\)]+$/',
             'platforms' => 'required|array|min:1',
             'platforms.*' => 'string|in:instagram,twitter,facebook,whatsapp,linkedin,tiktok',
             'followers' => 'required|string|in:500-1000,1000-5000,5000-50000,50000-100000,100000-500000,500000-1000000',
