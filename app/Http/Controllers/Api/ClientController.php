@@ -43,14 +43,15 @@ class ClientController extends Controller
             'campaign.end_date' => 'nullable|date|after:campaign.start_date',
         ]);
 
-        // Auto-generate password if not provided
-        $password = $request->password ?: $this->generateSecurePassword();
+        // Always generate a secure password for the client
+        $plainPassword = $this->generateSecurePassword();
+        $password = Hash::make($plainPassword);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
-            'password' => Hash::make($password),
+            'password' => $password,
             'role' => 'client',
         ]);
 
@@ -90,7 +91,8 @@ class ClientController extends Controller
             'end_date' => $request->campaign['end_date'],
         ]);
 
-        // TODO: Send welcome email with generated password
+        // Send welcome email with generated password
+        $this->sendWelcomeEmail($user, $plainPassword);
 
         // Notify admin of new client registration
         $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
@@ -100,6 +102,7 @@ class ClientController extends Controller
             'user' => $user,
             'client' => $client,
             'campaign' => $campaign,
+            'generated_password' => $plainPassword, // Include plain password for email
         ], 201)->header('Access-Control-Allow-Origin', '*')
                   ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE')
                   ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -150,5 +153,31 @@ class ClientController extends Controller
         }
         
         return $password;
+    }
+
+    /**
+     * Send welcome email to new client with login credentials
+     */
+    private function sendWelcomeEmail($user, $plainPassword)
+    {
+        try {
+            // TODO: Create and send welcome email with login credentials
+            // You can create a Mailable class for this
+            Mail::raw("Welcome to Daya!\n\nYour account has been created successfully.\n\nEmail: {$user->email}\nPassword: {$plainPassword}\n\nPlease change your password after first login.\n\nBest regards,\nDaya Team", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Welcome to Daya - Your Account Details');
+            });
+
+            Log::info("Welcome email sent to client", [
+                'client_id' => $user->id,
+                'client_email' => $user->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send welcome email to client", [
+                'client_id' => $user->id,
+                'client_email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
