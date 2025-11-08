@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         ]);
         
-        $middleware->append(function ($request, $next) {
+        $middleware->use(function ($request, $next) {
             $response = $next($request);
             
             // Allow requests from WordPress frontend
