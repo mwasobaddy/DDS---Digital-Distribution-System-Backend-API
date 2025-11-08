@@ -17,7 +17,7 @@ class AdminSeeder extends Seeder
             'name' => 'DDS Admin',
             'email' => 'kelvinramsiel@gmail.com',
             'phone' => '+254700000000',
-            'default_referral_code' => 'ADMIN_DEFAULT_001',
+            'default_referral_code' => 'ANDIXON1',
             'is_active' => true,
             'notification_settings' => [
                 'new_registrations' => true,
