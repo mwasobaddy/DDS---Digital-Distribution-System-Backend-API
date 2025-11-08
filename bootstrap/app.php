@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         ]);
         
-        $middleware->use(\App\Http\Middleware\CorsMiddleware::class);
+        $middleware->use([\App\Http\Middleware\CorsMiddleware::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
