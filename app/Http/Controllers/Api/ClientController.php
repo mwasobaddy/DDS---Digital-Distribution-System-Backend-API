@@ -25,6 +25,7 @@ class ClientController extends Controller
             'account_type' => 'nullable|string',
             'country' => 'nullable|string',
             'referral_code' => 'nullable|string',
+            'password' => 'nullable|string', // Allow password to be missing from request
             'billing_info' => 'nullable|array',
             'campaign' => 'required|array',
             'campaign.name' => 'required|string',
