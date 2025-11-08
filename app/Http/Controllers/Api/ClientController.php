@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class ClientController extends Controller
 {
@@ -101,10 +102,23 @@ class ClientController extends Controller
 
                 Log::info('Client created successfully', ['client_id' => $client->id, 'user_id' => $user->id]);
 
+                // Prevent multiple overlapping campaigns: user may only run one campaign at a time
+                $now = Carbon::now();
+                $hasActive = Campaign::where('client_id', $user->id)
+                    ->where(function ($q) use ($now) {
+                        $q->whereNull('end_date')
+                          ->orWhere('end_date', '>=', $now);
+                    })->exists();
+
+                if ($hasActive) {
+                    throw new \Exception('You already have an active campaign. You can only create a new campaign after the current campaign ends.');
+                }
+
                 // Create the campaign for the new client
                 $campaign = new Campaign();
                 $campaign->id = strtoupper('CAMP_' . uniqid());
-                $campaign->client_id = $client->id;
+                // store the user id as client identifier (campaigns.client_id references users.id)
+                $campaign->client_id = $user->id;
                 $campaign->title = $request->campaign['name'];
                 $campaign->campaign_type = $request->campaign['type'];
                 $campaign->description = $request->campaign['objective'] ?? null;
