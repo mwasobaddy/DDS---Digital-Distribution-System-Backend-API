@@ -45,9 +45,8 @@ class ClientController extends Controller
 
                 if ($hasActiveCampaign) {
                     $errors['email'] = ['This email already has an active campaign. You can only create a new campaign after the current campaign ends.'];
-                } else {
-                    $errors['email'] = ['Email already exists'];
                 }
+                // If no active campaign, we'll allow creating a new campaign for this existing user
             }
             
             // Campaign validation
@@ -83,37 +82,63 @@ class ClientController extends Controller
             // Use database transaction for data integrity
             return DB::transaction(function () use ($request, $plainPassword) {
                 
-                // Create user with explicitly hashed password
-                $user = new User();
-                $user->name = $request->name;
-                $user->email = $request->email;
-                $user->phone = $request->phone;
-                $user->password = Hash::make($plainPassword);
-                $user->role = 'client';
-                $user->save();
+                // Check if user already exists (from validation above)
+                $existingUser = User::where('email', $request->email)->first();
+                
+                if ($existingUser) {
+                    // Use existing user for new campaign
+                    $user = $existingUser;
+                    Log::info('Using existing user for new campaign', ['user_id' => $user->id, 'email' => $user->email]);
+                    
+                    // Get or create client profile for existing user
+                    $client = Client::where('user_id', $user->id)->first();
+                    if (!$client) {
+                        $client = new Client();
+                        $client->user_id = $user->id;
+                        $client->company_name = $request->company_name;
+                        $client->account_type = $request->account_type;
+                        $client->country = $request->country;
+                        $client->referral_code = $request->referral_code;
+                        $client->contact_person = $request->name;
+                        $client->billing_info = $request->billing_info ?? [];
+                        $client->save();
+                        Log::info('Client profile created for existing user', ['client_id' => $client->id, 'user_id' => $user->id]);
+                    } else {
+                        Log::info('Using existing client profile', ['client_id' => $client->id, 'user_id' => $user->id]);
+                    }
+                } else {
+                    // Create new user with explicitly hashed password
+                    $user = new User();
+                    $user->name = $request->name;
+                    $user->email = $request->email;
+                    $user->phone = $request->phone;
+                    $user->password = Hash::make($plainPassword);
+                    $user->role = 'client';
+                    $user->save();
 
-                if (!$user->id) {
-                    throw new \Exception('Failed to create user');
+                    if (!$user->id) {
+                        throw new \Exception('Failed to create user');
+                    }
+
+                    Log::info('User created successfully', ['user_id' => $user->id, 'email' => $user->email]);
+
+                    // Create client profile for new user
+                    $client = new Client();
+                    $client->user_id = $user->id;
+                    $client->company_name = $request->company_name;
+                    $client->account_type = $request->account_type;
+                    $client->country = $request->country;
+                    $client->referral_code = $request->referral_code;
+                    $client->contact_person = $request->name;
+                    $client->billing_info = $request->billing_info ?? [];
+                    $client->save();
+
+                    if (!$client->id) {
+                        throw new \Exception('Failed to create client profile');
+                    }
+
+                    Log::info('Client created successfully', ['client_id' => $client->id, 'user_id' => $user->id]);
                 }
-
-                Log::info('User created successfully', ['user_id' => $user->id, 'email' => $user->email]);
-
-                // Create client profile
-                $client = new Client();
-                $client->user_id = $user->id;
-                $client->company_name = $request->company_name;
-                $client->account_type = $request->account_type;
-                $client->country = $request->country;
-                $client->referral_code = $request->referral_code;
-                $client->contact_person = $request->name;
-                $client->billing_info = $request->billing_info ?? [];
-                $client->save();
-
-                if (!$client->id) {
-                    throw new \Exception('Failed to create client profile');
-                }
-
-                Log::info('Client created successfully', ['client_id' => $client->id, 'user_id' => $user->id]);
 
                 // Note: Active campaign check is now handled during email validation above
                 // This ensures existing users can't create overlapping campaigns
@@ -151,15 +176,17 @@ class ClientController extends Controller
 
                 Log::info('Campaign created successfully', ['campaign_id' => $campaign->id, 'client_id' => $client->id]);
 
-                // Send welcome email with generated password
-                $this->sendWelcomeEmail($user, $plainPassword);
+                // Send welcome email with generated password (only for new users)
+                if (!$existingUser) {
+                    $this->sendWelcomeEmail($user, $plainPassword);
+                }
 
                 // Notify admin of new client registration
                 $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Client and campaign created successfully',
+                    'message' => $existingUser ? 'New campaign created for existing user successfully' : 'Client and campaign created successfully',
                     'data' => [
                         'user' => [
                             'id' => $user->id,
@@ -181,7 +208,7 @@ class ClientController extends Controller
                             'status' => $campaign->status
                         ]
                     ],
-                    'generated_password' => $plainPassword
+                    'generated_password' => $existingUser ? null : $plainPassword
                 ], 201)->header('Access-Control-Allow-Origin', '*')
                           ->header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, PUT, DELETE')
                           ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
