@@ -12,6 +12,10 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id');
             $table->string('company_name');
+            $table->string('account_type')->nullable();
+            $table->string('country')->nullable();
+            $table->string('referral_code')->nullable();
+            $table->string('contact_person')->nullable();
             $table->json('billing_info');
             $table->timestamps();
 
