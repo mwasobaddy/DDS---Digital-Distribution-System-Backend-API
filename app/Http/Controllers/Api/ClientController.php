@@ -402,9 +402,9 @@ class ClientController extends Controller
             // Get client details
             $client = Client::where('user_id', $user->id)->first();
 
-            // Generate approval/rejection URLs (you may need to adjust these URLs based on your admin panel)
-            $approveUrl = route('api.campaign.approve', ['campaignId' => $campaign->id]);
-            $rejectUrl = route('api.campaign.reject', ['campaignId' => $campaign->id]);
+            // Generate approval/rejection URLs for email links (GET requests)
+            $approveUrl = route('api.campaign.approve.email', ['campaignId' => $campaign->id]);
+            $rejectUrl = route('api.campaign.reject.email', ['campaignId' => $campaign->id]);
 
             Mail::to($admin->email)->send(new CampaignApprovalRequest($user, $campaign, $client, $admin, $approveUrl, $rejectUrl));
 

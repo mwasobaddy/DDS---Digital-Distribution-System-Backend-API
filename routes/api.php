@@ -34,9 +34,14 @@ Route::post('/da/create', [DAController::class, 'create']);
 Route::post('/dcd/create', [DCDController::class, 'create']);
 Route::post('/client/create', [ClientController::class, 'create']);
 Route::post('/campaign/create', [CampaignController::class, 'create']);
+// POST routes for programmatic access
 Route::post('/campaign/{campaignId}/approve', [AdminCampaignController::class, 'approve'])->middleware('signed')->name('api.campaign.approve');
 Route::post('/campaign/{campaignId}/reject', [AdminCampaignController::class, 'reject'])->middleware('signed')->name('api.campaign.reject');
 Route::post('/campaign/{campaignId}/mark-paid', [AdminCampaignController::class, 'markPaid'])->middleware('signed')->name('api.campaign.mark-paid');
+
+// GET routes for email links (browser-friendly)
+Route::get('/campaign/{campaignId}/approve', [AdminCampaignController::class, 'approveViaEmail'])->name('api.campaign.approve.email');
+Route::get('/campaign/{campaignId}/reject', [AdminCampaignController::class, 'rejectViaEmail'])->name('api.campaign.reject.email');
 Route::post('/invoice/generate', [InvoiceController::class, 'generate']);
 Route::post('/qr/generate-dcd', [QRController::class, 'generateDcd']);
 Route::post('/qr/regenerate/{dcdId}', [QRController::class, 'regenerate']);
