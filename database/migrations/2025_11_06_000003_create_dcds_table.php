@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('dcds', function (Blueprint $table) {
             $table->string('id')->primary();
+            $table->string('referral_code')->unique();
             $table->unsignedBigInteger('user_id');
             $table->string('qr_code')->nullable();
             $table->unsignedBigInteger('referring_da_id')->nullable();
