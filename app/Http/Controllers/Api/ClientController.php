@@ -179,10 +179,15 @@ class ClientController extends Controller
                 // Send welcome email with generated password (only for new users)
                 if (!$existingUser) {
                     $this->sendWelcomeEmail($user, $plainPassword);
+                    // Notify admin of new client registration (only for new users)
+                    $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
                 }
 
-                // Notify admin of new client registration
-                $this->notifyAdminOfNewRegistration('Client', $client->id, $user, $client);
+                // Send campaign creation notification to user (for all users)
+                $this->sendCampaignCreationEmail($user, $campaign, $existingUser);
+                
+                // Send campaign approval request to admin (for all campaigns)
+                $this->sendCampaignApprovalRequestToAdmin($user, $campaign);
 
                 return response()->json([
                     'success' => true,
@@ -326,6 +331,89 @@ class ClientController extends Controller
             Log::error("Failed to send welcome email to client", [
                 'client_id' => $user->id,
                 'client_email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send campaign creation notification to user
+     */
+    private function sendCampaignCreationEmail($user, $campaign, $isExistingUser = false)
+    {
+        try {
+            $subject = $isExistingUser ? 'New Campaign Created Successfully' : 'Welcome to Daya - Campaign Created';
+            $message = $isExistingUser 
+                ? "Hello {$user->name},\n\nYour new campaign '{$campaign->title}' has been created successfully and is now pending admin approval.\n\nCampaign Details:\n- Name: {$campaign->title}\n- Budget: KES {$campaign->budget}\n- Status: {$campaign->status}\n- Campaign ID: {$campaign->id}\n\nYou will receive an email notification once your campaign is approved or if any changes are required.\n\nBest regards,\nDaya Team"
+                : "Hello {$user->name},\n\nWelcome to Daya! Your account and first campaign have been created successfully.\n\nCampaign Details:\n- Name: {$campaign->title}\n- Budget: KES {$campaign->budget}\n- Status: {$campaign->status}\n- Campaign ID: {$campaign->id}\n\nYour campaign is now pending admin approval. You will receive an email notification once your campaign is approved or if any changes are required.\n\nBest regards,\nDaya Team";
+
+            Mail::raw($message, function ($mail) use ($user, $subject) {
+                $mail->to($user->email)->subject($subject);
+            });
+
+            Log::info("Campaign creation email sent to user", [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'campaign_id' => $campaign->id,
+                'is_existing_user' => $isExistingUser
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send campaign creation email to user", [
+                'user_id' => $user->id,
+                'user_email' => $user->email,
+                'campaign_id' => $campaign->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send campaign approval request to admin
+     */
+    private function sendCampaignApprovalRequestToAdmin($user, $campaign)
+    {
+        try {
+            $admin = Admin::getDefaultAdmin();
+            if (!$admin) {
+                Log::warning("No active admin found for campaign approval notification");
+                return;
+            }
+
+            // Generate approval/rejection URLs (you may need to adjust these URLs based on your admin panel)
+            $approveUrl = route('api.campaign.approve', ['campaignId' => $campaign->id]);
+            $rejectUrl = route('api.campaign.reject', ['campaignId' => $campaign->id]);
+
+            $message = "New Campaign Pending Approval\n\n";
+            $message .= "Client: {$user->name} ({$user->email})\n";
+            $companyName = $user->client ? $user->client->company_name : 'N/A';
+            $message .= "Company: {$companyName}\n\n";
+            $message .= "Campaign Details:\n";
+            $message .= "- Name: {$campaign->title}\n";
+            $message .= "- Type: {$campaign->campaign_type}\n";
+            $message .= "- Budget: KES {$campaign->budget}\n";
+            $message .= "- Product URL: {$campaign->product_url}\n";
+            $message .= "- Campaign ID: {$campaign->id}\n";
+            $message .= "- Start Date: {$campaign->start_date}\n";
+            $message .= "- End Date: {$campaign->end_date}\n\n";
+            $message .= "Action Required:\n";
+            $message .= "Approve: {$approveUrl}\n";
+            $message .= "Reject: {$rejectUrl}\n\n";
+            $message .= "Please review and take appropriate action.";
+
+            Mail::raw($message, function ($mail) use ($admin) {
+                $mail->to($admin->email)->subject('New Campaign Approval Required');
+            });
+
+            Log::info("Campaign approval request sent to admin", [
+                'admin_id' => $admin->id,
+                'admin_email' => $admin->email,
+                'campaign_id' => $campaign->id,
+                'user_id' => $user->id
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send campaign approval request to admin", [
+                'campaign_id' => $campaign->id,
+                'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
         }
