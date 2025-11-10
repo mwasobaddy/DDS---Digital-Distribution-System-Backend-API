@@ -59,13 +59,47 @@ class DCDController extends Controller
         $qrCode = $dcdId . '_CAMP_PENDING';
         $referralCode = 'DCD_' . strtoupper(Str::random(6));
 
-        $referringDaId = null;
+        // Validate referrer DA or DCD, or use default admin
+        $referrer = null;
+        $referredById = null;
+        $referrerType = null;
+
         if ($request->da_referral_code) {
-            $da = DA::where('referral_code', $request->da_referral_code)->first();
-            if ($da) {
-                $referringDaId = $da->id;
-                // TODO: Award venture shares to DA
+            // Check if it's a DA referral code
+            $referrer = DA::where('referral_code', $request->da_referral_code)->first();
+            if ($referrer) {
+                $referredById = $referrer->id;
+                $referrerType = 'da';
+            } else {
+                // Check if it's a DCD referral code
+                $referrer = DCD::where('referral_code', $request->da_referral_code)->first();
+                if ($referrer) {
+                    $referredById = $referrer->id;
+                    $referrerType = 'dcd';
+                }
             }
+        }
+
+        // If no referrer found, use default admin referral
+        if (!$referrer) {
+            $admin = Admin::getDefaultAdmin();
+            if ($admin) {
+                // Create a referral record for admin attribution
+                $referredById = null; // Admin referrals are tracked differently
+                Log::info('DCD registered without referrer, using default admin', [
+                    'new_dcd_email' => $request->email,
+                    'admin_id' => $admin->id
+                ]);
+            }
+        }
+
+        // Log referral linking
+        if ($referrer) {
+            Log::info('DCD referred by existing user', [
+                'new_dcd_id' => $dcdId,
+                'referrer_type' => $referrerType,
+                'referrer_id' => $referrer->id
+            ]);
         }
 
         $dcd = DCD::create([
@@ -73,7 +107,7 @@ class DCDController extends Controller
             'user_id' => $user->id,
             'referral_code' => $referralCode,
             'qr_code' => $qrCode,
-            'referring_da_id' => $referringDaId,
+            'referring_da_id' => $referredById,
             'status' => 'active',
             'national_id' => $request->national_id,
             'dob' => $request->dob,
