@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\DA;
 use App\Models\DCD;
 use App\Mail\AdminNewUserNotification;
+use App\Mail\DCDWelcomeNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -96,7 +97,8 @@ class DCDController extends Controller
             'consent_data' => $request->consent_data,
         ]);
 
-        // TODO: Send welcome email with QR code PDF
+        // Send welcome email to DCD
+        $this->sendWelcomeEmailToDCD($user, $dcd, $request->password, $referralCode);
 
         // Notify admin of new DCD registration
         $this->notifyAdminOfNewRegistration('DCD', $dcd->id, $user, $dcd);
@@ -135,6 +137,30 @@ class DCDController extends Controller
                 'user_type' => $userType,
                 'user_id' => $userId,
                 'admin_id' => $admin->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send welcome email to new DCD
+     */
+    private function sendWelcomeEmailToDCD($user, $dcd, $password, $referralCode)
+    {
+        try {
+            // Send welcome email to DCD
+            Mail::to($user->email)->send(new DCDWelcomeNotification($user, $dcd, $password, $referralCode));
+
+            Log::info("DCD welcome email sent successfully", [
+                'user_id' => $user->id,
+                'dcd_id' => $dcd->id,
+                'user_email' => $user->email,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to send DCD welcome email", [
+                'user_id' => $user->id,
+                'dcd_id' => $dcd->id,
+                'user_email' => $user->email,
                 'error' => $e->getMessage(),
             ]);
         }
